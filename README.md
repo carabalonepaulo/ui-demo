@@ -4,9 +4,9 @@ A standalone starter application for [`carabalonepaulo/ui`](https://github.com/c
 It contains the raylib + fontstash backend, the page architecture, the dashboard,
 the typography page, and the scaling inspector.
 
-The library is **not** vendored into this repository. It is cloned into `ui/`
-and resolved with an Odin collection (`ui:ui`). That keeps the library and the
-application separate.
+The library is linked as a git submodule at `ui/` and resolved with an Odin
+collection (`ui:ui`). That keeps the library and the application separate while
+pinning an exact library commit.
 
 ## Requirements
 
@@ -18,23 +18,33 @@ application separate.
 ## Quick start
 
 ```sh
-git clone https://github.com/carabalonepaulo/ui-demo.git my-app
+git clone --recurse-submodules https://github.com/carabalonepaulo/ui-demo.git my-app
 cd my-app
-just setup     # clones the ui library into ./ui
 just run
 ```
+
+If you cloned without `--recurse-submodules`:
+
+```sh
+git submodule update --init --recursive
+just run
+```
+
+`just run`, `build`, `check`, and `screenshot` all depend on `setup`, which runs
+`git submodule update --init --recursive`; the separate step is optional.
 
 Without `just`:
 
 ```sh
-git clone https://github.com/carabalonepaulo/ui.git ui
+git submodule update --init --recursive
 odin run src -collection:ui=ui
 ```
 
 ### Using a local checkout of the library
 
-Instead of cloning, point the collection at an existing checkout of the `ui`
-repository:
+The submodule pins a commit of `carabalonepaulo/ui`. If you are working on the
+library and the app at the same time, either replace the submodule checkout
+with your local work or point the collection elsewhere:
 
 ```sh
 odin run src -collection:ui=../odin/ui
@@ -53,22 +63,24 @@ For editor/OLS support, update `ols.json`:
 The collection root must be the root of the `ui` repository (the repository that
 contains the `ui/` package), so imports are `ui:ui`.
 
-### Pinning the library version
-
-The `just setup` clone is convenient for experiments but is not pinned. To pin a
-commit/tag in your app, use a submodule instead:
+### Updating the pinned library
 
 ```sh
-git submodule add https://github.com/carabalonepaulo/ui.git ui
-git submodule update --init --recursive
-```
+# update the submodule to the latest main
+git submodule update --remote ui
+git add ui
+git commit -m "Update ui"
 
-A submodule makes `ui/` tracked, so remove `/ui` from `.gitignore`. The
-collection and imports are unchanged.
+# or pin an exact tag/commit
+git -C ui fetch --tags
+git -C ui checkout v0.1.0
+git add ui
+git commit -m "Pin ui v0.1.0"
+```
 
 ### OpenCode skill
 
-`opencode.json` points the OpenCode skill loader at the cloned library:
+`opencode.json` points the OpenCode skill loader at the submodule:
 
 ```json
 {
@@ -76,8 +88,8 @@ collection and imports are unchanged.
 }
 ```
 
-After `just setup`, the `ui-app` skill is available in this project. If you use a
-different library path, update that entry (or copy
+After the submodule is initialized, the `ui-app` skill is available in this
+project. If you use a different library path, update that entry (or copy
 `ui/.opencode/skills/ui-app` into your project's `.opencode/skills/`). For a
 global install, copy it to `~/.config/opencode/skills/ui-app`.
 
@@ -115,6 +127,7 @@ odin run src -collection:ui=ui -- --view 2 --scale 1.5 --ssaa 3 --screenshot scr
 ## Structure
 
 ```text
+ui/                    # git submodule -> carabalonepaulo/ui
 src/
 ├── main.odin          # window, backend callbacks, frame loop
 ├── scale.odin         # offscreen target + physical-pixel callbacks
@@ -176,9 +189,11 @@ automatically. Add it to `PAGE_ORDER` only if you use `--view`.
 
 ## Using it as a template
 
-Delete `.git`, rename the repository, and start adding pages. The shell and the
-core code do not need to change to add screens. For a new app, keep the
-`ui/` + `ols.json` + collection setup; everything else is yours.
+Use this repository as a template (or copy the tree) and start adding pages. Keep
+`.gitmodules`, `ols.json`, and the collection setup. If you re-initialize git,
+run `git submodule update --init --recursive` (or `just setup`) and commit the
+`ui` gitlink at the version you want. The shell and core code do not need to
+change to add screens.
 
 ## Scaling
 
