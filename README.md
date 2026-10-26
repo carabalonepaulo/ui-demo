@@ -78,7 +78,8 @@ collection and imports are unchanged.
 
 After `just setup`, the `ui-app` skill is available in this project. If you use a
 different library path, update that entry (or copy
-`ui/.opencode/skills/ui-app` into your project's `.opencode/skills/`).
+`ui/.opencode/skills/ui-app` into your project's `.opencode/skills/`). For a
+global install, copy it to `~/.config/opencode/skills/ui-app`.
 
 ## Run and build
 
