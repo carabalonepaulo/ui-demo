@@ -53,6 +53,19 @@ For editor/OLS support, update `ols.json`:
 The collection root must be the root of the `ui` repository (the repository that
 contains the `ui/` package), so imports are `ui:ui`.
 
+### Pinning the library version
+
+The `just setup` clone is convenient for experiments but is not pinned. To pin a
+commit/tag in your app, use a submodule instead:
+
+```sh
+git submodule add https://github.com/carabalonepaulo/ui.git ui
+git submodule update --init --recursive
+```
+
+A submodule makes `ui/` tracked, so remove `/ui` from `.gitignore`. The
+collection and imports are unchanged.
+
 ### OpenCode skill
 
 `opencode.json` points the OpenCode skill loader at the cloned library:
@@ -79,9 +92,9 @@ odin build src -out:ui-demo.exe -collection:ui=ui
 Headless screenshot:
 
 ```sh
-just screenshot 2 1.5 3 out.png
+just screenshot 2 1.5 3
 # or
-odin run src -collection:ui=ui -- --view 2 --scale 1.5 --ssaa 3 --screenshot out.png
+odin run src -collection:ui=ui -- --view 2 --scale 1.5 --ssaa 3 --screenshot screenshot.png
 ```
 
 `--view` is the page registration order: `0` Dashboard, `1` Typography,
