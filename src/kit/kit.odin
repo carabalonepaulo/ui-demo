@@ -1,6 +1,6 @@
 package kit
 
-import ui "ui:ui"
+import ui "ui:."
 
 C_WINDOW_BG :: ui.Color{8, 9, 12, 255}
 C_BG :: ui.Color{15, 17, 21, 255}

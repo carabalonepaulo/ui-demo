@@ -6,7 +6,7 @@
 // scale) is injected through Context instead of imported from the app.
 package pages
 
-import ui "ui:ui"
+import ui "ui:."
 
 Page :: enum {
 	Dashboard,

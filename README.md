@@ -5,7 +5,8 @@ It contains the raylib + fontstash backend, the page architecture, the dashboard
 the typography page, and the scaling inspector.
 
 The library is linked as a git submodule at `ui/` and resolved with an Odin
-collection (`ui:ui`). That keeps the library and the application separate while
+collection (`ui:.`). The collection points at the package folder `ui/ui`, not
+the repository root. That keeps the library and the application separate while
 pinning an exact library commit.
 
 ## Requirements
@@ -37,7 +38,23 @@ Without `just`:
 
 ```sh
 git submodule update --init --recursive
-odin run src -collection:ui=ui
+odin run src -collection:ui=ui/ui
+```
+
+`ols.json` is already configured for the package folder:
+
+```json
+{
+  "collections": [
+    { "name": "ui", "path": "ui/ui" }
+  ]
+}
+```
+
+Sources import it as:
+
+```odin
+import ui "ui:."
 ```
 
 ### Using a local checkout of the library
@@ -47,7 +64,7 @@ library and the app at the same time, either replace the submodule checkout
 with your local work or point the collection elsewhere:
 
 ```sh
-odin run src -collection:ui=../odin/ui
+odin run src -collection:ui=../odin/ui/ui
 ```
 
 For editor/OLS support, update `ols.json`:
@@ -55,13 +72,13 @@ For editor/OLS support, update `ols.json`:
 ```json
 {
   "collections": [
-    { "name": "ui", "path": "../odin/ui" }
+    { "name": "ui", "path": "../odin/ui/ui" }
   ]
 }
 ```
 
-The collection root must be the root of the `ui` repository (the repository that
-contains the `ui/` package), so imports are `ui:ui`.
+The collection root must be the library package folder (the inner `ui/ui`
+directory), not the repository root, so imports are `ui:.`.
 
 ### Updating the pinned library
 
@@ -98,8 +115,8 @@ global install, copy it to `~/.config/opencode/skills/ui-app`.
 ```sh
 just run
 just build
-odin run src -collection:ui=ui
-odin build src -out:ui-demo.exe -collection:ui=ui
+odin run src -collection:ui=ui/ui
+odin build src -out:ui-demo.exe -collection:ui=ui/ui
 ```
 
 Headless screenshot:
@@ -107,7 +124,7 @@ Headless screenshot:
 ```sh
 just screenshot 2 1.5 3
 # or
-odin run src -collection:ui=ui -- --view 2 --scale 1.5 --ssaa 3 --screenshot screenshot.png
+odin run src -collection:ui=ui/ui -- --view 2 --scale 1.5 --ssaa 3 --screenshot screenshot.png
 ```
 
 `--view` is the page registration order: `0` Dashboard, `1` Typography,

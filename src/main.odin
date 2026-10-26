@@ -6,7 +6,7 @@ import "core:os"
 import "core:strconv"
 import "core:strings"
 import "kit"
-import ui "ui:ui"
+import ui "ui:."
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 

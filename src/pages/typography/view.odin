@@ -2,7 +2,7 @@ package typography
 
 import ".."
 import "../../kit"
-import ui "ui:ui"
+import ui "ui:."
 import "core:fmt"
 
 TYPO_BODY :: "The UI library has no layout engine that guesses. You declare a scope, tell it how big it is, and then place things inside it. That sounds tedious, and it is, but it also means every frame costs the same and every position is known before it is drawn. Text is measured through the backend, wrapped by the library, and cached by a hash of its contents and options. Scroll offsets are bound to f64 values in the hashed store, so the same code can drive a list of ten items or a list of a million. The demo below is a single text scope: it wraps on word boundaries, clips to its rectangle, and scrolls vertically with the wheel."

@@ -1,7 +1,7 @@
 package scaling
 
 import ".."
-import ui "ui:ui"
+import ui "ui:."
 
 State :: struct {
 	ctx:          pages.Context,

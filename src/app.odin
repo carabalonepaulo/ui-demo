@@ -6,7 +6,7 @@ import "pages"
 import "pages/dashboard"
 import "pages/scaling"
 import "pages/typography"
-import ui "ui:ui"
+import ui "ui:."
 import rl "vendor:raylib"
 
 // Layout constants are logical pixels.

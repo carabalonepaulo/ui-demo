@@ -1,7 +1,7 @@
 package dashboard
 
 import ".."
-import ui "ui:ui"
+import ui "ui:."
 
 CARD_COUNT :: 60
 

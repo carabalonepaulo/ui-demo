@@ -1,5 +1,5 @@
 {
   "collections": [
-    { "name": "ui", "path": "ui" }
+    { "name": "ui", "path": "ui/ui" }
   ]
 }

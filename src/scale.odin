@@ -1,7 +1,7 @@
 package demo
 
 import "core:math"
-import ui "ui:ui"
+import ui "ui:."
 import rl "vendor:raylib"
 
 // Renders the UI into an offscreen target and blits it to the window.

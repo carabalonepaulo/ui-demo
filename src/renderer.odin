@@ -4,7 +4,7 @@ import "core:fmt"
 import "core:math"
 import "core:os"
 import "core:strings"
-import ui "ui:ui"
+import ui "ui:."
 import fs "vendor:fontstash"
 import rl "vendor:raylib"
 

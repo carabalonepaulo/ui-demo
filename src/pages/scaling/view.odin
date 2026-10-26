@@ -2,7 +2,7 @@ package scaling
 
 import ".."
 import "../../kit"
-import ui "ui:ui"
+import ui "ui:."
 import "core:fmt"
 
 view :: proc(self: ^State) {
