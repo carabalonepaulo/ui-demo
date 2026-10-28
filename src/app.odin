@@ -5,6 +5,7 @@ import "core:fmt"
 import "kit"
 import "pages"
 import "pages/dashboard"
+import "pages/editor"
 import components_page "pages/components"
 import "pages/gallery"
 import "pages/scaling"
@@ -25,9 +26,10 @@ PAGE_CTORS :: [?]proc() -> pages.Interface {
 	scaling.create,
 	gallery.create,
 	components_page.create,
+	editor.create,
 }
 
-PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling, .Textures, .Components}
+PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling, .Textures, .Components, .Editor}
 
 Next_Page :: struct {
 	page: pages.Page,
@@ -424,6 +426,7 @@ draw_footer :: proc() {
 		)
 	}
 }
+
 
 
 

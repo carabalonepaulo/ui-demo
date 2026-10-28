@@ -62,13 +62,6 @@ LINE_EDIT :: Line_Edit_Style {
 }
 
 @(private = "file")
-Input_Repeat :: struct {
-	command:      edit.Command,
-	key:          rl.KeyboardKey,
-	timer:        f64,
-	is_repeating: bool,
-}
-
 Line_Edit :: struct {
 	builder:   strings.Builder,
 	masked:    strings.Builder,
@@ -81,7 +74,7 @@ Line_Edit :: struct {
 
 // The focused field. One per process is enough for a demo; clicking another
 // field moves the focus.
-@(private = "file")
+@(private)
 focused: ui.Id
 
 // focus moves the keyboard focus to `id`, or clears it with 0.
@@ -113,7 +106,7 @@ line_edit :: proc(
 		state.masked = strings.builder_make_none(allocator)
 		edit.init(&state.edit, allocator, allocator)
 		state.edit.set_clipboard = clipboard_set
-		state.edit.get_clipboard = clipboard_get
+		state.edit.get_clipboard = clipboard_get_single
 		edit.setup_once(&state.edit, &state.builder)
 		state.edit.selection = {0, 0}
 	}
@@ -123,11 +116,11 @@ line_edit :: proc(
 	current := strings.to_string(state.builder)
 	if current != text^ {
 		strings.builder_reset(&state.builder)
-		strings.write_string(&state.builder, text^)
+		strings.write_string(&state.builder, normalize_newlines(text^, " "))
 		// Caret at the end, no selection.
-		state.edit.selection = {len(text^), len(text^)}
+		state.edit.selection = {len(state.builder.buf), len(state.builder.buf)}
 		state.scroll_x = 0
-		current = text^
+		current = strings.to_string(state.builder)
 	}
 
 	opts := ui.Text_Options {
@@ -335,89 +328,9 @@ masked_display :: proc(state: ^Line_Edit, text: string, mask: Maybe(rune)) -> st
 	return strings.to_string(state.masked)
 }
 
-// Width of a prefix, in logical units, through the same font pipeline `ui.text`
-// uses. Measuring a prefix is how the caret and the selection get their x.
-@(private = "file")
-measure :: proc(text: string, opts: ^ui.Text_Options) -> f64 {
-	return ui.measure_text(ui.id("line_edit/measure"), {ui.AUTO, ui.AUTO}, text, opts).x
-}
-
-// Byte slice holding the first `count` runes of `text`.
-@(private = "file")
-prefix_runes :: proc(text: string, count: int) -> string {
-	index := 0
-	for _ in 0 ..< count {
-		if index >= len(text) do break
-		_, size := utf8.decode_rune(text[index:])
-		index += size
-	}
-	return text[:index]
-}
-
-// Byte index of the first character of rune number `count`.
-@(private = "file")
-byte_index_of_rune :: proc(text: string, count: int) -> int {
-	index := 0
-	for _ in 0 ..< count {
-		if index >= len(text) do break
-		_, size := utf8.decode_rune(text[index:])
-		index += size
-	}
-	return index
-}
-
-// Byte index of the caret closest to `x`, where `x` is in the text's own
-// coordinate space (padding and scroll already removed).
-@(private = "file")
-caret_at :: proc(text: string, opts: ^ui.Text_Options, x: f64) -> int {
-	if x <= 0 do return 0
-
-	previous := 0.0
-	index := 0
-
-	for index < len(text) {
-		_, rune_size := utf8.decode_rune(text[index:])
-		next := index + rune_size
-		width := measure(text[:next], opts)
-
-		if x < width {
-			if x - previous < width - x do return index
-			return next
-		}
-
-		index = next
-		previous = width
-	}
-
-	return len(text)
-}
-
-// Commands that edit the text, as opposed to moving the caret or copying.
-@(private = "file")
-command_changes_text :: proc(command: edit.Command) -> bool {
-	#partial switch command {
-	case .Backspace, .Delete, .Delete_Word_Left, .Delete_Word_Right:
-		return true
-	}
-	return false
-}
-
 @(private = "file")
 destroy_line_edit :: proc(state: ^Line_Edit) {
 	edit.destroy(&state.edit)
 	strings.builder_destroy(&state.builder)
 	strings.builder_destroy(&state.masked)
-}
-
-@(private = "file")
-clipboard_set :: proc(user_data: rawptr, text: string) -> bool {
-	rl.SetClipboardText(strings.clone_to_cstring(text, context.temp_allocator))
-	return true
-}
-
-@(private = "file")
-clipboard_get :: proc(user_data: rawptr) -> (string, bool) {
-	text := rl.GetClipboardText()
-	if text == nil do return "", false
-	return string(text), true
 }

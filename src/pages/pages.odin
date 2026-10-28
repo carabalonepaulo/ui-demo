@@ -14,6 +14,7 @@ Page :: enum {
 	Scaling,
 	Textures,
 	Components,
+	Editor,
 }
 
 Scale_Info :: struct {
@@ -63,3 +64,6 @@ Scaling_Payload :: struct {}
 Textures_Payload :: struct {}
 
 Components_Payload :: struct {}
+
+Editor_Payload :: struct {}
+
