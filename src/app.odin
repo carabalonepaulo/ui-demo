@@ -313,6 +313,9 @@ draw_sidebar :: proc() {
 		// when only the scale row fits; skip both when the nav list needs the
 		// space.
 		nav_end := 28 + f64(len(app.page_list)) * 44
+		button_style := components.BUTTON
+		button_style.font = app.font_regular
+
 		can_scale := nav_end + 12 + 88 <= area.y
 		can_snap := nav_end + 12 + 166 <= area.y
 
@@ -346,8 +349,7 @@ draw_sidebar :: proc() {
 				{0, 52},
 				{34, 28},
 				"-",
-				components.BUTTON,
-				app.font_regular,
+				button_style,
 			) {
 				app.pending_scale -= 0.25
 			}
@@ -356,8 +358,7 @@ draw_sidebar :: proc() {
 				{42, 52},
 				{34, 28},
 				"+",
-				components.BUTTON,
-				app.font_regular,
+				button_style,
 			) {
 				app.pending_scale += 0.25
 			}
@@ -381,8 +382,7 @@ draw_sidebar :: proc() {
 					{0, 116},
 					{76, 28},
 					app.scale.snap ? "on" : "off",
-					components.BUTTON,
-					app.font_regular,
+					button_style,
 				) {
 					app.scale.snap = !app.scale.snap
 				}
@@ -424,5 +424,6 @@ draw_footer :: proc() {
 		)
 	}
 }
+
 
 

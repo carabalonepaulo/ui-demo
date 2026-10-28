@@ -91,6 +91,7 @@ draw_budget_buttons :: proc(self: ^State, area: ui.Vec2) {
 		label := fmt.aprintf("%d MB", mb, allocator = ui.get_temp_allocator())
 
 		style := components.BUTTON
+		style.font = self.font_regular
 		if current == mb {
 			style.border = kit.C_ACCENT
 			style.text = kit.C_ACCENT
@@ -102,7 +103,6 @@ draw_budget_buttons :: proc(self: ^State, area: ui.Vec2) {
 			{BUDGET_BUTTON_W, 28},
 			label,
 			style,
-			self.font_regular,
 		) {
 			textures.set_budget(mb * 1024 * 1024)
 		}

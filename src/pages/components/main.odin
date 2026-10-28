@@ -2,17 +2,20 @@ package components_page
 
 import ".."
 import "../../components"
-import "core:strings"
 import ui "ui:."
 
+FONT_OPTIONS := [2]string{"Regular", "Bold"}
+
 State :: struct {
-	ctx:          pages.Context,
-	font_bold:    ui.Font,
+	ctx:         pages.Context,
+	font_bold:   ui.Font,
 	font_regular: ui.Font,
-	name:         string,
-	note:         string,
-	submits:      int,
-	last:         string,
+	name:        string,
+	password:    string,
+	enabled:     bool,
+	font_choice: int,
+	font_size:   f64,
+	submits:     int,
 }
 
 create :: proc() -> pages.Interface {
@@ -29,9 +32,7 @@ create :: proc() -> pages.Interface {
 }
 
 destroy :: proc(self: ^State) {
-	// `name` and `note` are borrowed from the widgets' buffers; only `last` is
-	// owned here.
-	delete(self.last)
+	// The field text is borrowed from the widgets' buffers; nothing is owned here.
 	free(self)
 }
 
@@ -40,6 +41,7 @@ on_ready :: proc(self: ^State, ctx: pages.Context) {
 	self.font_bold = ctx.load_font("bold", 16)
 	self.font_regular = ctx.load_font("regular", 14)
 	self.name = "Jelly UI"
+	self.font_size = 14
 }
 
 on_enter :: proc(self: ^State, payload: ^pages.Components_Payload) {

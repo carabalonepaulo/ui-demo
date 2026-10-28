@@ -8,6 +8,9 @@
 //		"Type a name…",
 //	)
 //
+//	// A password field: every rune is drawn as `*`.
+//	components.line_edit(ui.id("pass"), &self.password, size, style, "Password…", '*')
+//
 // `text^` is the source of truth for the caller. After every call it points at
 // the editor's internal `strings.Builder`, so reading it costs nothing and the
 // widget never allocates a copy per keystroke. That also means the slice is
@@ -67,11 +70,12 @@ Input_Repeat :: struct {
 }
 
 Line_Edit :: struct {
-	builder:     strings.Builder,
-	edit:        edit.State,
-	repeat:      Input_Repeat,
-	scroll_x:    f64,
-	blink:       f64,
+	builder:   strings.Builder,
+	masked:    strings.Builder,
+	edit:      edit.State,
+	repeat:    Input_Repeat,
+	scroll_x:  f64,
+	blink:     f64,
 	allocator: mem.Allocator,
 }
 
@@ -96,6 +100,7 @@ line_edit :: proc(
 	size: ui.Vec2,
 	style: Line_Edit_Style,
 	placeholder := "",
+	mask: Maybe(rune) = nil,
 	allocator := context.allocator,
 ) -> (
 	changed: bool,
@@ -105,10 +110,12 @@ line_edit :: proc(
 	if created {
 		state.allocator = allocator
 		state.builder = strings.builder_make_none(allocator)
+		state.masked = strings.builder_make_none(allocator)
 		edit.init(&state.edit, allocator, allocator)
 		state.edit.set_clipboard = clipboard_set
 		state.edit.get_clipboard = clipboard_get
 		edit.setup_once(&state.edit, &state.builder)
+		state.edit.selection = {0, 0}
 	}
 
 	// `text^` is the source of truth. When the caller assigned something else,
@@ -131,38 +138,33 @@ line_edit :: proc(
 		font_color     = style.text_color,
 	}
 
-	// Use the mouse directly instead of the `.Hovered` interest: focus and the
-	// caret should react on the click frame, not one frame later.
-	origin := ui.get_screen_pos()
-	mouse := ui.ctx.callbacks.get_mouse_pos()
-	inside :=
-		mouse.x >= origin.x &&
-		mouse.y >= origin.y &&
-		mouse.x <= origin.x + size.x &&
-		mouse.y <= origin.y + size.y
-
 	ui.scope(size)
+	origin := ui.get_screen_pos()
+	mouse := mouse_pos()
+	inside := point_in_rect(origin, size, mouse)
 
 	inner_x := style.padding
 	inner_w := max(1, size.x - style.padding * 2)
 	text_y := (size.y - style.font_size) * 0.5
 
-	// Focus and caret placement.
+	// Focus and caret placement. The click maps a position in the *displayed*
+	// text back to a byte index in the real text.
 	if rl.IsMouseButtonPressed(.LEFT) {
 		if inside {
 			focused = id
 			state.blink = 0
-			index := caret_at(current, &opts, mouse.x - origin.x - inner_x + state.scroll_x)
+
+			display := masked_display(state, current, mask)
+			clicked := caret_at(display, &opts, mouse.x - origin.x - inner_x + state.scroll_x)
+			index := byte_index_of_rune(current, utf8.rune_count(display[:clicked]))
 			state.edit.selection = {index, index}
 		} else if focused == id {
 			focused = 0
 		}
 	} else if focused == id && rl.IsMouseButtonDown(.LEFT) {
-		state.edit.selection[0] = caret_at(
-			current,
-			&opts,
-			mouse.x - origin.x - inner_x + state.scroll_x,
-		)
+		display := masked_display(state, current, mask)
+		clicked := caret_at(display, &opts, mouse.x - origin.x - inner_x + state.scroll_x)
+		state.edit.selection[0] = byte_index_of_rune(current, utf8.rune_count(display[:clicked]))
 	}
 
 	if focused == id {
@@ -170,10 +172,11 @@ line_edit :: proc(
 	}
 
 	current = strings.to_string(state.builder)
+	display := masked_display(state, current, mask)
 	caret := clamp(state.edit.selection[0], 0, len(current))
 
 	// Keep the caret inside the visible area.
-	caret_x := measure(current[:caret], &opts)
+	caret_x := measure(prefix_runes(display, utf8.rune_count(current[:caret])), &opts)
 	if caret_x - state.scroll_x > inner_w do state.scroll_x = caret_x - inner_w
 	if caret_x - state.scroll_x < 0 do state.scroll_x = caret_x
 	state.scroll_x = max(0, state.scroll_x)
@@ -183,8 +186,8 @@ line_edit :: proc(
 
 		if focused == id {
 			if start, end := edit.sorted_selection(&state.edit); start != end {
-				x0 := measure(current[:start], &opts)
-				x1 := measure(current[:end], &opts)
+				x0 := measure(prefix_runes(display, utf8.rune_count(current[:start])), &opts)
+				x1 := measure(prefix_runes(display, utf8.rune_count(current[:end])), &opts)
 				ui.draw_rect(
 					{x0 - state.scroll_x, text_y},
 					{x1 - x0, style.font_size},
@@ -195,7 +198,7 @@ line_edit :: proc(
 
 		if len(current) > 0 {
 			ui.scope_at({-state.scroll_x, text_y}, {ui.AUTO, style.font_size})
-			ui.text(ui.id(id, "text"), {ui.AUTO, style.font_size}, current, opts)
+			ui.text(ui.id(id, "text"), {ui.AUTO, style.font_size}, display, opts)
 		} else if len(placeholder) > 0 {
 			placeholder_opts := opts
 			placeholder_opts.font_color = style.placeholder_color
@@ -319,6 +322,19 @@ handle_keyboard :: proc(state: ^Line_Edit) -> (submitted: bool, changed: bool) {
 	return submitted, changed
 }
 
+// The text as drawn: the source, or one mask rune per source rune.
+@(private = "file")
+masked_display :: proc(state: ^Line_Edit, text: string, mask: Maybe(rune)) -> string {
+	mask_rune, masked := mask.?
+	if !masked do return text
+
+	strings.builder_reset(&state.masked)
+	for _ in 0 ..< utf8.rune_count(text) {
+		strings.write_rune(&state.masked, mask_rune)
+	}
+	return strings.to_string(state.masked)
+}
+
 // Width of a prefix, in logical units, through the same font pipeline `ui.text`
 // uses. Measuring a prefix is how the caret and the selection get their x.
 @(private = "file")
@@ -326,14 +342,28 @@ measure :: proc(text: string, opts: ^ui.Text_Options) -> f64 {
 	return ui.measure_text(ui.id("line_edit/measure"), {ui.AUTO, ui.AUTO}, text, opts).x
 }
 
-// Commands that edit the text, as opposed to moving the caret or copying.
+// Byte slice holding the first `count` runes of `text`.
 @(private = "file")
-command_changes_text :: proc(command: edit.Command) -> bool {
-	#partial switch command {
-	case .Backspace, .Delete, .Delete_Word_Left, .Delete_Word_Right:
-		return true
+prefix_runes :: proc(text: string, count: int) -> string {
+	index := 0
+	for _ in 0 ..< count {
+		if index >= len(text) do break
+		_, size := utf8.decode_rune(text[index:])
+		index += size
 	}
-	return false
+	return text[:index]
+}
+
+// Byte index of the first character of rune number `count`.
+@(private = "file")
+byte_index_of_rune :: proc(text: string, count: int) -> int {
+	index := 0
+	for _ in 0 ..< count {
+		if index >= len(text) do break
+		_, size := utf8.decode_rune(text[index:])
+		index += size
+	}
+	return index
 }
 
 // Byte index of the caret closest to `x`, where `x` is in the text's own
@@ -362,10 +392,21 @@ caret_at :: proc(text: string, opts: ^ui.Text_Options, x: f64) -> int {
 	return len(text)
 }
 
+// Commands that edit the text, as opposed to moving the caret or copying.
+@(private = "file")
+command_changes_text :: proc(command: edit.Command) -> bool {
+	#partial switch command {
+	case .Backspace, .Delete, .Delete_Word_Left, .Delete_Word_Right:
+		return true
+	}
+	return false
+}
+
 @(private = "file")
 destroy_line_edit :: proc(state: ^Line_Edit) {
 	edit.destroy(&state.edit)
 	strings.builder_destroy(&state.builder)
+	strings.builder_destroy(&state.masked)
 }
 
 @(private = "file")
@@ -380,6 +421,3 @@ clipboard_get :: proc(user_data: rawptr) -> (string, bool) {
 	if text == nil do return "", false
 	return string(text), true
 }
-
-
-

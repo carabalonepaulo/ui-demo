@@ -2,25 +2,31 @@
 //
 // A widget draws itself and returns its result for the frame: `button` returns
 // true when it was pressed, `line_edit` returns the edited text and flags.
+//
+// Everything visual comes from the widget's `Style`, including the font and the
+// font size, so a theme can replace a whole Style at once.
 package components
 
 import "../kit"
 import ui "ui:."
 
 Button_Style :: struct {
-	bg:      ui.Color,
-	hover:   ui.Color,
-	pressed: ui.Color,
-	border:  ui.Color,
-	text:    ui.Color,
+	bg:        ui.Color,
+	hover:     ui.Color,
+	pressed:   ui.Color,
+	border:    ui.Color,
+	text:      ui.Color,
+	font:      ui.Font,
+	font_size: f64,
 }
 
 BUTTON :: Button_Style {
-	bg      = kit.C_PANEL,
-	hover   = kit.C_PANEL_HOVER,
-	pressed = kit.C_PANEL_PRESSED,
-	border  = kit.C_BORDER,
-	text    = kit.C_TEXT,
+	bg        = kit.C_PANEL,
+	hover     = kit.C_PANEL_HOVER,
+	pressed   = kit.C_PANEL_PRESSED,
+	border    = kit.C_BORDER,
+	text      = kit.C_TEXT,
+	font_size = 13,
 }
 
 // button draws a label centered in `size` and returns true on the frame the
@@ -30,8 +36,6 @@ button :: proc(
 	pos, size: ui.Vec2,
 	label: string,
 	style: Button_Style,
-	font: ui.Font,
-	text_size: f64 = 13,
 ) -> bool {
 	hovered := ui.get(ui.id(id, "hover"), bool)
 	pressed := ui.get(ui.id(id, "pressed"), bool)
@@ -53,8 +57,13 @@ button :: proc(
 	ui.draw_rect({0, 0}, {1, size.y}, style.border)
 	ui.draw_rect({size.x - 1, 0}, {1, size.y}, style.border)
 
-	opts := kit.make_text_opts(font, text_size, style.text)
-	kit.draw_text_line(ui.id(id, "label"), {}, size, label, opts, .Center)
+	opts := ui.Text_Options {
+		font       = style.font,
+		font_size  = style.font_size,
+		font_color = style.text,
+	}
+
+	text_in(ui.id(id, "label"), {}, size, label, opts, .Center)
 
 	return pressed^
 }
