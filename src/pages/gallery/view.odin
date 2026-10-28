@@ -1,6 +1,7 @@
 package gallery
 
 import ".."
+import "../../components"
 import "../../kit"
 import "../../textures"
 import ui "ui:."
@@ -89,13 +90,13 @@ draw_budget_buttons :: proc(self: ^State, area: ui.Vec2) {
 	for mb, i in BUDGETS_MB {
 		label := fmt.aprintf("%d MB", mb, allocator = ui.get_temp_allocator())
 
-		style := kit.SMALL_BUTTON
+		style := components.BUTTON
 		if current == mb {
 			style.border = kit.C_ACCENT
 			style.text = kit.C_ACCENT
 		}
 
-		if kit.draw_button(
+		if components.button(
 			ui.id("tex/budget", i),
 			{x + f64(i) * (BUDGET_BUTTON_W + BUDGET_BUTTON_GAP), 16},
 			{BUDGET_BUTTON_W, 28},
@@ -167,3 +168,4 @@ draw_tile :: proc(self: ^State, index: int) {
 		kit.make_text_opts(self.font_regular, 10, color),
 	)
 }
+

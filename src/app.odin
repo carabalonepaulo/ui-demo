@@ -1,9 +1,11 @@
 package demo
 
+import "components"
 import "core:fmt"
 import "kit"
 import "pages"
 import "pages/dashboard"
+import components_page "pages/components"
 import "pages/gallery"
 import "pages/scaling"
 import "pages/typography"
@@ -22,9 +24,10 @@ PAGE_CTORS :: [?]proc() -> pages.Interface {
 	typography.create,
 	scaling.create,
 	gallery.create,
+	components_page.create,
 }
 
-PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling, .Textures}
+PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling, .Textures, .Components}
 
 Next_Page :: struct {
 	page: pages.Page,
@@ -178,7 +181,7 @@ app_draw :: proc(ud: rawptr) {
 	}
 
 	debug := ui.get(ui.id("app/debug"), bool)
-	if rl.IsKeyPressed(.D) {
+	if rl.IsKeyPressed(.D) && components.focused_id() == 0 {
 		debug^ = !(debug^)
 	}
 	if debug^ {
@@ -305,9 +308,17 @@ draw_sidebar :: proc() {
 			}
 		}
 
-		controls_y := max(190, area.y - 166)
-		{
-			ui.scope_at({0, controls_y}, {area.x, 166})
+		// The sidebar is fixed in logical units, so at a large ui scale there is
+		// less room. Place the rendering controls bottom-up and drop the snap row
+		// when only the scale row fits; skip both when the nav list needs the
+		// space.
+		nav_end := 28 + f64(len(app.page_list)) * 44
+		can_scale := nav_end + 12 + 88 <= area.y
+		can_snap := nav_end + 12 + 166 <= area.y
+
+		if can_scale {
+			controls_h := can_snap ? 166.0 : 88.0
+			ui.scope_at({0, area.y - controls_h}, {area.x, controls_h})
 
 			kit.draw_text_line(
 				ui.id("side/rendering"),
@@ -322,11 +333,6 @@ draw_sidebar :: proc() {
 				app.scale.ui_scale,
 				allocator = ui.get_temp_allocator(),
 			)
-			snap_label := fmt.aprintf(
-				"Pixel snap    %s",
-				app.scale.snap ? "on" : "off",
-				allocator = ui.get_temp_allocator(),
-			)
 
 			kit.draw_text_line(
 				ui.id("side/scale/label"),
@@ -335,43 +341,51 @@ draw_sidebar :: proc() {
 				scale_label,
 				kit.make_text_opts(app.font_regular, 12, kit.C_TEXT_MUTED),
 			)
-			if kit.draw_button(
+			if components.button(
 				ui.id("side/scale/minus"),
 				{0, 52},
 				{34, 28},
 				"-",
-				kit.SMALL_BUTTON,
+				components.BUTTON,
 				app.font_regular,
 			) {
 				app.pending_scale -= 0.25
 			}
-			if kit.draw_button(
+			if components.button(
 				ui.id("side/scale/plus"),
 				{42, 52},
 				{34, 28},
 				"+",
-				kit.SMALL_BUTTON,
+				components.BUTTON,
 				app.font_regular,
 			) {
 				app.pending_scale += 0.25
 			}
 
-			kit.draw_text_line(
-				ui.id("side/snap/label"),
-				{0, 92},
-				{area.x, 18},
-				snap_label,
-				kit.make_text_opts(app.font_regular, 12, kit.C_TEXT_MUTED),
-			)
-			if kit.draw_button(
-				ui.id("side/snap/toggle"),
-				{0, 116},
-				{76, 28},
-				app.scale.snap ? "on" : "off",
-				kit.SMALL_BUTTON,
-				app.font_regular,
-			) {
-				app.scale.snap = !app.scale.snap
+			if can_snap {
+				snap_label := fmt.aprintf(
+					"Pixel snap    %s",
+					app.scale.snap ? "on" : "off",
+					allocator = ui.get_temp_allocator(),
+				)
+
+				kit.draw_text_line(
+					ui.id("side/snap/label"),
+					{0, 92},
+					{area.x, 18},
+					snap_label,
+					kit.make_text_opts(app.font_regular, 12, kit.C_TEXT_MUTED),
+				)
+				if components.button(
+					ui.id("side/snap/toggle"),
+					{0, 116},
+					{76, 28},
+					app.scale.snap ? "on" : "off",
+					components.BUTTON,
+					app.font_regular,
+				) {
+					app.scale.snap = !app.scale.snap
+				}
 			}
 		}
 	}
@@ -410,3 +424,5 @@ draw_footer :: proc() {
 		)
 	}
 }
+
+

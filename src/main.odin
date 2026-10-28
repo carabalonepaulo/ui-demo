@@ -6,6 +6,7 @@ import "core:nbio"
 import "core:os"
 import "core:strconv"
 import "core:strings"
+import "components"
 import "kit"
 import "textures"
 import ui "ui:."
@@ -148,6 +149,8 @@ main :: proc() {
 	defer rl.CloseWindow()
 	rl.SetWindowMinSize(1000, 650)
 	rl.SetTargetFPS(60)
+	// Escape blurs the focused text field instead of closing the window.
+	rl.SetExitKey(.KEY_NULL)
 
 	// One event loop for the whole process. The texture cache queues file reads
 	// on it; `nbio.tick` runs their callbacks once per frame.
@@ -258,6 +261,9 @@ take_screenshot_if_requested :: proc() {
 }
 
 handle_keys :: proc() {
+	// While a text field owns the keyboard, the global shortcuts are just text.
+	if components.focused_id() != 0 do return
+
 	if rl.IsKeyPressed(.MINUS) || rl.IsKeyPressed(.KP_SUBTRACT) {
 		app.pending_scale -= 0.25
 	}
@@ -297,3 +303,10 @@ ui_poll :: proc(draw: proc(ud: rawptr), ud: rawptr = nil) {
 	}
 	ui_scale_end(&app.scale)
 }
+
+
+
+
+
+
+

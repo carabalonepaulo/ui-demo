@@ -26,22 +26,6 @@ Text_Align :: enum {
 	Right,
 }
 
-Button_Style :: struct {
-	bg:      ui.Color,
-	hover:   ui.Color,
-	pressed: ui.Color,
-	border:  ui.Color,
-	text:    ui.Color,
-}
-
-SMALL_BUTTON :: Button_Style {
-	bg      = C_PANEL,
-	hover   = C_PANEL_HOVER,
-	pressed = C_PANEL_PRESSED,
-	border  = C_BORDER,
-	text    = C_TEXT,
-}
-
 make_text_opts :: proc(
 	font: ui.Font,
 	size: f64,
@@ -83,40 +67,6 @@ draw_text_line :: proc(
 
 	ui.scope_at({x, y}, measured)
 	ui.text(uid, measured, text, opts)
-}
-
-draw_button :: proc(
-	uid: ui.Id,
-	pos, size: ui.Vec2,
-	label: string,
-	style: Button_Style,
-	font: ui.Font,
-	text_size: f64 = 13,
-) -> bool {
-	hovered := ui.get(ui.id(uid, "hover"), bool)
-	pressed := ui.get(ui.id(uid, "pressed"), bool)
-
-	ui.scope_at(pos, size)
-	ui.bind(.Hovered, hovered)
-	ui.bind(.Pressed, pressed)
-
-	bg := style.bg
-	if pressed^ {
-		bg = style.pressed
-	} else if hovered^ {
-		bg = style.hover
-	}
-
-	ui.fill_rect(bg)
-	ui.draw_rect({0, 0}, {size.x, 1}, style.border)
-	ui.draw_rect({0, size.y - 1}, {size.x, 1}, style.border)
-	ui.draw_rect({0, 0}, {1, size.y}, style.border)
-	ui.draw_rect({size.x - 1, 0}, {1, size.y}, style.border)
-
-	opts := make_text_opts(font, text_size, style.text)
-	draw_text_line(ui.id(uid, "label"), {}, size, label, opts, .Center)
-
-	return pressed^
 }
 
 // Shared page heading. Call after the content's outer padding; it consumes the

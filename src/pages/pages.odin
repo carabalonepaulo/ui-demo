@@ -13,6 +13,7 @@ Page :: enum {
 	Typography,
 	Scaling,
 	Textures,
+	Components,
 }
 
 Scale_Info :: struct {
@@ -60,3 +61,5 @@ Typography_Payload :: struct {}
 Scaling_Payload :: struct {}
 
 Textures_Payload :: struct {}
+
+Components_Payload :: struct {}
