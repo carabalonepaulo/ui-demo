@@ -230,7 +230,7 @@ renderer_measure :: proc(
 }
 
 // Draws text in physical pixels. Fontstash rasterizes glyphs at the requested
-// pixel size, so this stays crisp at any UI scale and supersampling factor.
+// pixel size, so this stays crisp at any UI scale.
 renderer_draw_text :: proc(
 	r: ^Renderer,
 	font: ui.Font,

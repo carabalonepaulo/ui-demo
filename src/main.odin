@@ -109,6 +109,13 @@ CALLBACKS :: ui.Callbacks {
 		ui_scale_draw_rect(&app.scale, x, y, w, h, color)
 	},
 	draw_text = proc(font: ui.Font, text: string, x, y, size, spacing: f64, color: ui.Color) {
+		// Glyphs are bitmaps: scaling the quads with the matrix would blur them.
+		// Drop the matrix, draw at the physical size, restore it. rlgl transforms
+		// vertices on submission, so this neither flushes the batch nor changes
+		// the draw order.
+		ui_scale_pop_matrix(&app.scale)
+		defer ui_scale_push_matrix(&app.scale)
+
 		ppu := app.scale.ppu
 		renderer_draw_text(
 			&app.renderer,
@@ -125,27 +132,22 @@ CALLBACKS :: ui.Callbacks {
 		ui_scale_enable_scissors(&app.scale, x, y, w, h)
 	},
 	disable_scissors = proc() {
-		ui_scale_disable_scissors(&app.scale)
+		ui_scale_disable_scissors()
 	},
 }
 
 main :: proc() {
-	ui_scale_init(&app.scale, 1, 2)
+	ui_scale_init(&app.scale, 1)
 	parse_args()
 
-	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
+	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT, .MSAA_4X_HINT})
 	rl.InitWindow(1180, 760, "Odin UI - demo")
 	defer rl.CloseWindow()
 	rl.SetWindowMinSize(1000, 650)
 	rl.SetTargetFPS(60)
 
-	// Mipmap generation logs at INFO every frame; warnings and errors still show.
-	rl.SetTraceLogLevel(.WARNING)
-
 	renderer_init(&app.renderer)
 	defer renderer_deinit(&app.renderer)
-
-	defer ui_scale_deinit(&app.scale)
 
 	assert(ui.init(CALLBACKS, 65_536, 8 * mem.Megabyte), "failed to init ui")
 	defer ui.deinit()
@@ -201,15 +203,9 @@ parse_args :: proc() {
 			} else {
 				i += 1
 			}
-		case "--ssaa":
-			if i + 1 < len(os.args) {
-				if value, ok := strconv.parse_f64(os.args[i + 1]); ok {
-					app.scale.render_scale = clamp(value, 1, 4)
-				}
-				i += 2
-			} else {
-				i += 1
-			}
+		case "--no-snap":
+			app.scale.snap = false
+			i += 1
 		case:
 			i += 1
 		}
@@ -221,7 +217,7 @@ take_screenshot_if_requested :: proc() {
 
 	app.screenshot_frames -= 1
 	if app.screenshot_frames == 0 {
-		// The UI blit is still inside raylib's render batch.
+		// The UI draw calls are still inside raylib's render batch.
 		rlgl.DrawRenderBatchActive()
 
 		image := rl.LoadImageFromScreen()
@@ -244,15 +240,12 @@ handle_keys :: proc() {
 	if rl.IsKeyPressed(.EQUAL) || rl.IsKeyPressed(.KP_ADD) {
 		app.pending_scale += 0.25
 	}
-	if rl.IsKeyPressed(.LEFT_BRACKET) {
-		app.pending_render_scale -= 0.25
-	}
-	if rl.IsKeyPressed(.RIGHT_BRACKET) {
-		app.pending_render_scale += 0.25
+	if rl.IsKeyPressed(.S) {
+		app.scale.snap = !app.scale.snap
 	}
 	if rl.IsKeyPressed(.R) {
 		app.pending_scale = 1 - app.scale.ui_scale
-		app.pending_render_scale = 2 - app.scale.render_scale
+		app.scale.snap = true
 	}
 }
 
@@ -261,20 +254,19 @@ apply_pending :: proc() {
 		app.scale.ui_scale = clamp(app.scale.ui_scale + app.pending_scale, 0.5, 1.5)
 		app.pending_scale = 0
 	}
-	if app.pending_render_scale != 0 {
-		app.scale.render_scale = clamp(app.scale.render_scale + app.pending_render_scale, 1, 4)
-		app.pending_render_scale = 0
-	}
 }
 
 ui_poll :: proc(draw: proc(ud: rawptr), ud: rawptr = nil) {
 	screen := ui.Vec2{f64(rl.GetScreenWidth()), f64(rl.GetScreenHeight())}
 	ui_scale_update(&app.scale, screen)
 
+	// Everything inside this block is in logical units. The matrix turns each
+	// draw call -- including raylib calls made directly by a component -- into
+	// physical pixels. Nothing is rendered offscreen.
 	ui_scale_begin(&app.scale)
 	{
 		// Keep frame() and scope() in the same block: their deferred ends run
-		// in reverse order here, before the target is unbound.
+		// in reverse order here, before the matrix is popped.
 		ui.frame()
 		ui.scope(app.scale.logical_size)
 		draw(ud)

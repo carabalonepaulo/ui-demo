@@ -44,7 +44,6 @@ App :: struct {
 	// Backend state.
 	start_page_index:     int,
 	pending_scale:        f64,
-	pending_render_scale: f64,
 	wheel:                Smooth_Wheel,
 	screenshot_path:      string,
 	screenshot_frames:    int,
@@ -106,15 +105,12 @@ app_load_font :: proc(name: string, size: f64) -> ui.Font {
 
 app_scale_info :: proc() -> pages.Scale_Info {
 	return {
-		window_size = {int(rl.GetScreenWidth()), int(rl.GetScreenHeight())},
+		window_size = {int(app.scale.dest_size.x), int(app.scale.dest_size.y)},
 		logical_size = app.scale.logical_size,
-		target_size = {
-			int(app.scale.target.texture.width),
-			int(app.scale.target.texture.height),
-		},
 		ui_scale = app.scale.ui_scale,
-		render_scale = app.scale.render_scale,
 		pixels_per_unit = app.scale.ppu,
+		snap = app.scale.snap,
+		atlas_size = {int(app.renderer.atlas.width), int(app.renderer.atlas.height)},
 	}
 }
 
@@ -223,11 +219,11 @@ draw_header :: proc() {
 
 draw_scale_badge :: proc(area: ui.Vec2) {
 	label := fmt.aprintf(
-		"scale %.2fx   ·   ssaa %.2fx   ·   %d x %d",
+		"scale %.2fx   ·   ppu %.2f   ·   %d x %d",
 		app.scale.ui_scale,
-		app.scale.render_scale,
-		app.scale.target.texture.width,
-		app.scale.target.texture.height,
+		app.scale.ppu,
+		int(app.scale.dest_size.x),
+		int(app.scale.dest_size.y),
 		allocator = ui.get_temp_allocator(),
 	)
 	opts := kit.make_text_opts(app.font_bold, 11, kit.C_ACCENT)
@@ -318,9 +314,9 @@ draw_sidebar :: proc() {
 				app.scale.ui_scale,
 				allocator = ui.get_temp_allocator(),
 			)
-			ssaa_label := fmt.aprintf(
-				"Supersample   %.2fx",
-				app.scale.render_scale,
+			snap_label := fmt.aprintf(
+				"Pixel snap    %s",
+				app.scale.snap ? "on" : "off",
 				allocator = ui.get_temp_allocator(),
 			)
 
@@ -353,31 +349,21 @@ draw_sidebar :: proc() {
 			}
 
 			kit.draw_text_line(
-				ui.id("side/ssaa/label"),
+				ui.id("side/snap/label"),
 				{0, 92},
 				{area.x, 18},
-				ssaa_label,
+				snap_label,
 				kit.make_text_opts(app.font_regular, 12, kit.C_TEXT_MUTED),
 			)
 			if kit.draw_button(
-				ui.id("side/ssaa/minus"),
+				ui.id("side/snap/toggle"),
 				{0, 116},
-				{34, 28},
-				"-",
+				{76, 28},
+				app.scale.snap ? "on" : "off",
 				kit.SMALL_BUTTON,
 				app.font_regular,
 			) {
-				app.pending_render_scale -= 0.25
-			}
-			if kit.draw_button(
-				ui.id("side/ssaa/plus"),
-				{42, 116},
-				{34, 28},
-				"+",
-				kit.SMALL_BUTTON,
-				app.font_regular,
-			) {
-				app.pending_render_scale += 0.25
+				app.scale.snap = !app.scale.snap
 			}
 		}
 	}
@@ -410,7 +396,7 @@ draw_footer :: proc() {
 			ui.id("footer/help"),
 			{area.x * 0.5, 0},
 			{area.x * 0.5, 28},
-			"- / =  scale      [ / ]  supersample      R  reset      D  profiler",
+			"- / =  scale      S  pixel snap      R  reset      D  profiler",
 			kit.make_text_opts(app.font_regular, 11, kit.C_TEXT_DIM),
 			.Right,
 		)

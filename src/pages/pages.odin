@@ -17,10 +17,11 @@ Page :: enum {
 Scale_Info :: struct {
 	window_size:     [2]int,
 	logical_size:    ui.Vec2,
-	target_size:     [2]int,
 	ui_scale:        f64,
-	render_scale:    f64,
 	pixels_per_unit: f64,
+	snap:            bool,
+	// The only UI-owned texture left: the fontstash glyph atlas.
+	atlas_size:      [2]int,
 }
 
 Context :: struct {
