@@ -4,6 +4,7 @@ import "core:fmt"
 import "kit"
 import "pages"
 import "pages/dashboard"
+import "pages/gallery"
 import "pages/scaling"
 import "pages/typography"
 import ui "ui:."
@@ -20,9 +21,10 @@ PAGE_CTORS :: [?]proc() -> pages.Interface {
 	dashboard.create,
 	typography.create,
 	scaling.create,
+	gallery.create,
 }
 
-PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling}
+PAGE_ORDER :: [?]pages.Page{.Dashboard, .Typography, .Scaling, .Textures}
 
 Next_Page :: struct {
 	page: pages.Page,
@@ -43,6 +45,7 @@ App :: struct {
 	font_bold:            ui.Font,
 	// Backend state.
 	start_page_index:     int,
+	start_budget_mb:      int,
 	pending_scale:        f64,
 	wheel:                Smooth_Wheel,
 	screenshot_path:      string,
@@ -57,6 +60,7 @@ app_init :: proc() {
 		set_scroll_modifier = app_set_scroll_modifier,
 		load_font           = app_load_font,
 		scale_info          = app_scale_info,
+		resolve_asset       = app_resolve_asset,
 	}
 
 	ctors := PAGE_CTORS
@@ -101,6 +105,10 @@ app_load_font :: proc(name: string, size: f64) -> ui.Font {
 	// backend that bakes atlases per size would use it.
 	_ = size
 	return renderer_get_font(&app.renderer, name)
+}
+
+app_resolve_asset :: proc(path: string) -> string {
+	return asset_path(path)
 }
 
 app_scale_info :: proc() -> pages.Scale_Info {

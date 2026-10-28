@@ -2,10 +2,12 @@ package demo
 
 import "core:fmt"
 import "core:mem"
+import "core:nbio"
 import "core:os"
 import "core:strconv"
 import "core:strings"
 import "kit"
+import "textures"
 import ui "ui:."
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
@@ -138,6 +140,7 @@ CALLBACKS :: ui.Callbacks {
 
 main :: proc() {
 	ui_scale_init(&app.scale, 1)
+	app.start_budget_mb = 8
 	parse_args()
 
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT, .MSAA_4X_HINT})
@@ -146,8 +149,16 @@ main :: proc() {
 	rl.SetWindowMinSize(1000, 650)
 	rl.SetTargetFPS(60)
 
+	// One event loop for the whole process. The texture cache queues file reads
+	// on it; `nbio.tick` runs their callbacks once per frame.
+	assert(nbio.acquire_thread_event_loop() == nil, "failed to acquire the nbio event loop")
+	defer nbio.release_thread_event_loop()
+
 	renderer_init(&app.renderer)
 	defer renderer_deinit(&app.renderer)
+
+	textures.init(app.start_budget_mb * mem.Megabyte)
+	defer textures.deinit()
 
 	assert(ui.init(CALLBACKS, 65_536, 8 * mem.Megabyte), "failed to init ui")
 	defer ui.deinit()
@@ -158,6 +169,10 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		handle_keys()
 		apply_pending()
+
+		// Async reads complete in the event loop; tick uploads what is ready.
+		nbio.tick(0)
+		textures.tick()
 
 		rl.BeginDrawing()
 		rl.ClearBackground(transmute(rl.Color)(kit.C_WINDOW_BG))
@@ -206,6 +221,15 @@ parse_args :: proc() {
 		case "--no-snap":
 			app.scale.snap = false
 			i += 1
+		case "--budget":
+			if i + 1 < len(os.args) {
+				if value, ok := strconv.parse_int(os.args[i + 1], 10); ok {
+					app.start_budget_mb = clamp(value, 1, 64)
+				}
+				i += 2
+			} else {
+				i += 1
+			}
 		case:
 			i += 1
 		}

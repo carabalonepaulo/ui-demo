@@ -12,6 +12,7 @@ Page :: enum {
 	Dashboard,
 	Typography,
 	Scaling,
+	Textures,
 }
 
 Scale_Info :: struct {
@@ -31,6 +32,9 @@ Context :: struct {
 	// fontstash backend can ignore it: the same handle works at any font size.
 	load_font:           proc(name: string, size: f64) -> ui.Font,
 	scale_info:          proc() -> Scale_Info,
+	// Resolves a repository-relative asset path for the current working
+	// directory. The returned string is short-lived; clone it if you keep it.
+	resolve_asset:       proc(path: string) -> string,
 }
 
 Interface :: struct {
@@ -54,3 +58,5 @@ Dashboard_Payload :: struct {}
 Typography_Payload :: struct {}
 
 Scaling_Payload :: struct {}
+
+Textures_Payload :: struct {}
